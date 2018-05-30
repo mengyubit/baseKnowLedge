@@ -6,15 +6,9 @@
 let fs = require('fs');
 let path = require('path');
 let vm = require('vm');
-var localVar = 'initial value';
-
-//在runInThisContext创建的沙箱环境中执行
-var vmResult = vm.runInThisContext('localVar = "vm";');
-console.log('vmResult: ', vmResult);    //vmResult:  vm
 function Module(p) {
   this.id = p; // 当前模块的标识
   this.exports = {}; // 每个模块都有一个exports属性
-  this.loaded = false; // 这个模块默认没有加载完
 }
 // 所有的加载策略
 Module.wrapper = ['(function(exports,require,module){','\n})'];
@@ -23,10 +17,10 @@ Module._extensions = {
       // 读取js文件 增加一个闭包了
       let script = fs.readFileSync(module.id,'utf8');
       let fn = Module.wrapper[0] + script + Module.wrapper[1];
-      console.log(fn)
+      let ff = vm.runInThisContext(fn);
       //在fn 下执行方法，可以找到fn变量，而eval找不到变量,
       //在module.exports环境下执行(function(exports,require,module){module.exports='zfpx'})函数，参数分别对应exports-->module.exports(暗含exports=module.exports)，require-->req，module
-      vm.runInThisContext(fn).call(module.exports,module.exports,req,module); // exports = 'zfpx'
+      ff.call(module.exports,module.exports,req,module); // exports = 'zfpx'
       return module.exports
   },
   '.json': function (module) {
@@ -34,7 +28,7 @@ Module._extensions = {
   },
   '.node': 'xxxx'
 }
-Module._cacheModule = {}// 根据的是绝对路径进行缓存的 
+Module._cacheModule = {}// 根据的是绝对路径进行缓存的
 // 解析绝对路径的方法 返回一个绝对路径
 Module._resolveFileName = function (moduleId) {
   let p = path.resolve(moduleId);//绝对路径

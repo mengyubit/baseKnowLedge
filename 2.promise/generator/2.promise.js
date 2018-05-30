@@ -18,7 +18,7 @@ function co(it) {
           // 当第一个promise执行完再继续执行下一个next
           next(data);
         }), reject); // 有一个失败了就失败了
-      }else{ // 迭代成功后将成功的结果返回
+      }else { // 迭代成功后将成功的结果返回
         resolve(value);
       }
     }
