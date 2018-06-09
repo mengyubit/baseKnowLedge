@@ -1,6 +1,5 @@
-console.log(this === module.exports);//true 因为在module.export下执行,所以this就是module.exports
-module.exports = 'zfpx'; // 'zfpx'
-// exports = 'zfpx';// {}
+// module.exports = 'zfpx'; // 'zfpx'
+exports = 'zfpx';// {}
 // exports.a = '1';// {a:'1'}
 
 //module.exports默认情况下是一个空对象{}

@@ -2,10 +2,18 @@
 // 定义了如何导入模块 require
 // 还定义了如何导出模块 module.exports 导出xxx
 // 还定义了一个js就是一个模块
-
 let fs = require('fs');
 let path = require('path');
 let vm = require('vm');
+var fff = vm.runInThisContext("(function(aa){return aa})");
+var module1 = {'x':1};
+console.log(fff(module1.x))
+
+var tt = vm.runInThisContext("(function aa (){console.log('oka')})")
+tt();
+var oka = 'lll'
+var yy = eval("(function aa (){console.log(oka)})")
+yy()
 function Module(p) {
   this.id = p; // 当前模块的标识
   this.exports = {}; // 每个模块都有一个exports属性
@@ -17,9 +25,9 @@ Module._extensions = {
       // 读取js文件 增加一个闭包了
       let script = fs.readFileSync(module.id,'utf8');
       let fn = Module.wrapper[0] + script + Module.wrapper[1];
-      let ff = vm.runInThisContext(fn);
-      //在fn 下执行方法，可以找到fn变量，而eval找不到变量,
-      //在module.exports环境下执行(function(exports,require,module){module.exports='zfpx'})函数，参数分别对应exports-->module.exports(暗含exports=module.exports)，require-->req，module
+      let ff = eval(fn);
+      //在module.exports环境下执行(function(exports,require,module){module.exports='zfpx'})函数，
+      // 参数分别对应exports-->module.exports(暗含exports=module.exports)，require-->req，module
       ff.call(module.exports,module.exports,req,module); // exports = 'zfpx'
       return module.exports
   },
@@ -31,7 +39,7 @@ Module._extensions = {
 Module._cacheModule = {}// 根据的是绝对路径进行缓存的
 // 解析绝对路径的方法 返回一个绝对路径
 Module._resolveFileName = function (moduleId) {
-  let p = path.resolve(moduleId);//绝对路径
+  let p =path.join(__dirname,moduleId);//绝对路径
   // 没有后缀我在加上后缀 如果传过来的有后缀就不用加了
   if (!path.extname(moduleId)) {
     let arr = Object.keys(Module._extensions);
