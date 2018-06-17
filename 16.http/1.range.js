@@ -33,3 +33,4 @@ server.on('request',async function (req,res) {
   
 });
 server.listen(3000);
+// curl -v --header "Range:bytes=0-3" http://localhost:3000

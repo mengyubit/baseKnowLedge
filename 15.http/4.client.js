@@ -3,7 +3,7 @@ let http = require('http');
 let options = {
   hostname:'localhost',
   path:'/a',
-  port:6000,
+  port:3000,
   method:'post',
   headers:{
     a:1,
