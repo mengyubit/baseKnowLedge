@@ -21,6 +21,7 @@ let stat = util.promisify(fs.stat);
 let readdir = util.promisify(fs.readdir);
 let config = require('./config');
 let template = fs.readFileSync(path.resolve(__dirname, 'tmpl.html'), 'utf8');
+
 class Server {
   constructor(args) {
     this.config = { ...config, ...args };// 将配置挂载在我们的实例上
@@ -117,15 +118,19 @@ class Server {
       res.end();
       return
     };
-    let compress = this.gzip(req, res, p, stat);
-    let { start, end } = this.range(req, res, p, stat); //范围请求，返回开始位置和结束位置
-    if (compress) { // 返回的是一个压缩流
-      res.setHeader('Content-Type', mime.getType(p) + ';charset=utf8');
-      fs.createReadStream(p, { start, end }).pipe(compress).pipe(res);
-    } else {
-      res.setHeader('Content-Type', mime.getType(p) + ';charset=utf8');
-      fs.createReadStream(p, { start, end }).pipe(res);
-    }
+
+    this.compressAndRange(req, res, p, stat);
+  }
+  compressAndRange(req, res, p, stat) {
+      let compress = this.gzip(req, res, p, stat);
+      let { start, end } = this.range(req, res, p, stat); //范围请求，返回开始位置和结束位置
+      if (compress) { // 返回的是一个压缩流
+          res.setHeader('Content-Type', mime.getType(p) + ';charset=utf8');
+          fs.createReadStream(p, { start, end }).pipe(compress).pipe(res);
+      } else {
+          res.setHeader('Content-Type', mime.getType(p) + ';charset=utf8');
+          fs.createReadStream(p, { start, end }).pipe(res);
+      }
   }
   sendError(req, res, e) {
     // 解析字符串打印对象

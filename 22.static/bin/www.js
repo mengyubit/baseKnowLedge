@@ -14,7 +14,7 @@ let argv = yargs.option('port', {
   description: 'this is hostname'
 }).option('dir', {
   alias: 'd',
-  default: process.cwd(),
+  default: process.cwd(),//命令的打开目录
   type: String,
   demand: false,
   description: 'this is cwd'
