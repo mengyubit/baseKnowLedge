@@ -2,7 +2,6 @@ let http = require('http');
 let url = require('url');
 function createApplication() {
   let app = (req, res) => {
-    console.log('xxxx')
     let reqMethod = req.method.toLowerCase();
     let { pathname } = url.parse(req.url, true);
     console.log(reqMethod,pathname);

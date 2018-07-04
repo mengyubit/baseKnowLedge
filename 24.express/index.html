@@ -7,6 +7,44 @@
   <title>Document</title>
 </head>
 <body>
-  hello
+<ul>
+  <li>hh</li>
+  <li>hh</li>
+  <li>hh</li>
+  <li>hh</li>
+</ul>
+  <script>
+   var num =1;
+   var obj ={
+       num:2,
+       getNum(){
+           this.num+=1;
+           console.log(this.num);//3
+           (function(){
+               console.log(this.num);//1
+           })()
+           return this.num;
+       }
+   }
+
+    var tt = obj.getNum;
+   console.log(tt());
+
+
+   const curry = func => {
+       const g = (...allArgs) => allArgs.length >= func.length ?
+               func(...allArgs)
+               :(...args) => g(...allArgs, ...args);
+       return g ;
+   }
+
+   const foo = curry((a,b,c,d)=>{
+       console.log(a,b,c,d)
+   });
+   var ff = foo(1)(2)(3);
+   ff(4)
+
+
+  </script>
 </body>
 </html>

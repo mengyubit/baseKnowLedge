@@ -8,5 +8,213 @@
 </head>
 <body>
   <img src="/logo.png" alt="">
+<script>
+
+    //promise2是then方法里面新new出来并return的promise，用于保存当前then方法处理的最后的结果和状//态,供下一个then使用；而x指的是当前被调用的then方法里面的回调函数执行的结果（可能是一个promise也可能是一个数值）；resolve和reject //都是属于promise2的
+    function resolvePromise(promise2, x, resolve, reject) {
+        // 判断x是不是promise
+        // 规范里规定了一段代码，这个代码可以实现我们的promise和别人的promise可以进行交互
+        if (promise2 === x) { // 不能自己等待自己完成
+            return reject(new TypeError('循环引用'));
+        }
+        // x不是null或者是对象或者函数
+        if (x !== null && (typeof x === 'object' || typeof x === 'function')) {
+            let called; // 防止成功后调用失败
+            try { // 防止取then是出现异常 Object.defineProperty
+                let then = x.then; // 取x的then方法 {then:{}}
+                if (typeof then === 'function') { // 如果then是函数我就认为它是promise
+                    // call 第一个参数是this ，后面的是成功的回调和失败的回调
+                    then.call(x, y => { // 如果y是promise就继续递归解析promise，then方法的用途就是执行函数，将最新的状态和值保存到当前promsie中
+                        if(called) return;
+                        called = true;
+                        //这里的resolve和reject依然是promise2的
+                        resolvePromise(promise2,y,resolve,reject);
+                    }, r => { // 只要失败了就失败了
+                        if (called) return;
+                        called = true;
+                        reject(r);
+                    });
+                }else{ // then是一个普通对象，就直接成功即可1
+                    resolve(x);
+                }
+            } catch (e) {
+                if (called) return;
+                called = true;
+                reject(e);
+            }
+        } else { // x = 123
+            //这里的resolve和reject依然是promise2
+            resolve(x); // x就是一个普通值，最后的非promise走这里，将x存到promise 中的value中
+        }
+    }
+    class Promise {
+        //传入executor，自动执行。executor非延时情况下，将生成一个带有状态和值的promsie，延时情
+        //况下，延时触发回调后更新promise状态和值
+        constructor(executor) {
+            // 默认状态是等待态
+            this.status = 'pending';
+            this.value = undefined;
+            this.reason = undefined;
+            // 存放成功的回调
+            this.onResolvedCallbacks = [];
+            // 存放失败的回调
+            this.onRejectedCallbacks = [];
+            let resolve = (data) => {
+                if (this.status === 'pending') {
+                    this.value = data;
+                    this.status = 'resolved';
+                    this.onResolvedCallbacks.forEach(fn => fn());//延时触发时，该数组不为空，立即触发的，数组为空
+                }
+            }
+            let reject = (reason) => {
+                if (this.status === 'pending') {
+                    this.reason = reason;
+                    this.status = 'rejected';
+                    this.onRejectedCallbacks.forEach(fn => fn());
+                }
+            }
+            try { // 执行时可能会发生异常：throw  err
+                executor(resolve, reject);
+            } catch (e) {
+                reject(e); // promise失败了
+            }
+        }
+        then(onFulFilled, onRejected) {
+            // 解决onFulFilled,onRejected没有传的问题
+            onFulFilled = typeof onFulFilled === 'function' ? onFulFilled : y => y;
+            onRejected = typeof onRejected === 'function' ? onRejected : err => { throw err; };
+            let promise2;
+            console.log(onFulFilled)
+            if (this.status === 'resolved') {
+                //链式调用，返回一个新的promise2，所有的状态和值都存在promise2中
+                promise2 = new Promise((resolve, reject) => {
+                    // 定时器实现异步
+                    setTimeout(() => {
+                        //捕获then方法里面的throw err
+                        try {
+                            //这里的this指的是前一个promise，x就是回调函数的执行结果
+                            let x = onFulFilled(this.value);//第一次传入'hh'
+                            //前一个promise保存的value值传过去，并执行直//到非promise为止，然后///把所得值存到当前promise中，供下一个promise使用
+                            // resolvePromise可以解析x和promise2之间的关系
+                            resolvePromise(this, x, resolve, reject);
+                        } catch (e) {
+                            reject(e);
+                        }
+                    }, 0);
+                });
+            }
+            if (this.status === 'rejected') {
+                promise2 = new Promise((resolve, reject) => {
+                    setTimeout(() => {
+                        try {
+                            let x = onRejected(this.reason);
+                            resolvePromise(this, x, resolve, reject)
+                        } catch (e) {
+                            reject(e);
+                        }
+                    }, 0);
+                });
+            }
+            // 当前既没有完成 也没有失败:如延时触发resolve  setTimeout(()=>resolve; 50)
+            if (this.status === 'pending') {
+                // 存放成功的回调
+                promise2 = new Promise((resolve, reject) => {
+                    this.onResolvedCallbacks.push(() => {
+                        setTimeout(() => {
+                            try {
+                                let x = onFulFilled(this.value);
+                                resolvePromise(this, x, resolve, reject)
+                            } catch (e) {
+                                reject(e);
+                            }
+                        }, 0)
+                    });
+                    // 存放失败的回调
+                    this.onRejectedCallbacks.push(() => {
+                        setTimeout(() => {
+                            try {
+                                let x = onRejected(this.reason);
+                                resolvePromise(this, x, resolve, reject);
+                            } catch (e) {
+                                reject(e);
+                            }
+                        }, 0);
+                    });
+                })
+            }
+            return promise2; // 调用then后返回一个新的promise
+        }
+        // catch接收的参数 只用错误
+        catch(onRejected) {
+            // catch就是then的没有成功的简写
+            return this.then(null, onRejected);
+        }
+        always(callback) {
+            setTimeout(() => {
+                console.log(this.status)
+                return this.then((value)=>{
+                    callback(value,undefined)
+                },(reason) => {
+                    callback(undefined, reason);
+                })
+            }, 0);
+
+        }
+    }
+    Promise.resolve = function (val) {
+        return new Promise((resolve, reject) => resolve(val))
+    }
+    Promise.reject = function (val) {
+        return new Promise((resolve, reject) => reject(val));
+    }
+    Promise.race = function (promises) {
+        return new Promise((resolve, reject) => {
+            for (let i = 0; i < promises.length; i++) {
+                promises[i].then(resolve, reject);
+            }
+        });
+    }
+    Promise.all = function (promises) {
+        return new Promise((resolve,reject)=>{
+            let arr = [];
+            let i = 0; // i的目的是为了保证获取全部成功，来设置的索引
+            function processData(index,data) {
+                arr[index] = data;
+                i++;
+                if (i === promises.length){
+                    resolve(arr);
+                }
+            }
+            for(let i = 0;i<promises.length;i++){
+                promises[i].then(data=>{
+                    processData(i,data);
+                }, reject);
+            }
+        })
+    }
+    Promise.deferred = Promise.defer = function () {
+        let dfd = {};
+        dfd.promise = new Promise((resolve, reject) => {
+            dfd.resolve = resolve;
+            dfd.reject = reject;
+        })
+        return dfd;
+    }
+
+    var p1 = new Promise((res,rej)=>{
+        res('pp');
+    });
+    p1.then(() => {
+        return new Promise((resolve )=>{
+            resolve('kk')
+        })
+    },(err)=>{
+        console.log(err)
+
+    }).always((data,err)=>{
+        console.log(data,err)
+    })
+</script>
+
 </body>
 </html>
